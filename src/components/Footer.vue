@@ -1,7 +1,7 @@
 <template>
-  <v-footer class="hidden-sm-and-down" fixed height="auto">
+  <v-footer dark height="auto">
     <v-card class="flex" flat tile>
-      <v-card-title class="teal darken-2">
+      <v-card-title class="teal">
         <strong class="subheading">Get connected with us on social networks!</strong>
 
         <v-spacer></v-spacer>
@@ -11,7 +11,10 @@
         </v-btn>
       </v-card-title>
 
-      <v-card-actions class="grey darken-3 justify-center">&copy;2018 — Festformer</v-card-actions>
+      <v-card-actions class="grey darken-3 justify-center">
+        &copy;2018 —
+        <strong>Festformer</strong>
+      </v-card-actions>
     </v-card>
   </v-footer>
 </template>

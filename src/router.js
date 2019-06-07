@@ -4,7 +4,6 @@ import Router from "vue-router";
 import Home from "./components/Home.vue";
 import Profile from "./components/profile/Profile.vue";
 import Festivals from "./components/Festivals.vue";
-import FestivalsBackup from "./components/FestivalsBackup.vue";
 Vue.use(Router);
 
 const router = new Router({
@@ -27,11 +26,6 @@ const router = new Router({
       path: "/festivals",
       name: "Festivals",
       component: Festivals
-    },
-    {
-      path: "/FestivalsBackup",
-      name: "FestivalsBackup",
-      component: FestivalsBackup
     }
   ]
 });

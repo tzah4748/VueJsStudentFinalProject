@@ -1,27 +1,47 @@
 <template>
-  <v-toolbar dark fixed color="transparent">
-    <v-toolbar-items>
-      <v-btn flat :icon="headerIcon" @click="routeTo('Home')">
-        <v-icon large>beach_access</v-icon>
-        {{headerTitle}}
-      </v-btn>
+  <v-toolbar app fixed dark color="transparent">
+    <!-- Side icons for menu (Mobile) -->
+    <v-toolbar-side-icon v-if="smallScreen"></v-toolbar-side-icon>
+    <!-- Title - Home Link (Not Mobile) -->
+    <v-toolbar-items v-else>
+      <v-tooltip bottom>
+        <template v-slot:activator="{ on }">
+          <v-btn flat :icon="smallScreen" v-on="on" @click="routeTo('Home')">
+            <v-icon large>beach_access</v-icon>Festformer
+          </v-btn>
+        </template>
+        <span>Home</span>
+      </v-tooltip>
     </v-toolbar-items>
+    <!-- Spacer -->
+    <v-spacer v-if="!smallScreen"></v-spacer>
+    <span :class="smallScreen ? 'subheading' : 'title'">{{pageName}}</span>
     <v-spacer></v-spacer>
+    <!-- Profile Avatar - Profile Link (Signed In) -->
     <v-toolbar-items v-if="currentUser">
-      <v-btn flat fab @click="routeTo('Profile', {user_id: currentUser.uid})">
-        <v-avatar>
-          <v-img v-if="photoURL" :src="photoURL"></v-img>
-          <v-icon v-else>person_outline</v-icon>
-        </v-avatar>
-      </v-btn>
-      <v-btn flat @click="signout()">
-        Signout
+      <v-tooltip bottom>
+        <template v-slot:activator="{ on }">
+          <v-btn flat fab v-on="on" @click="routeTo('Profile', {user_id: currentUser.uid})">
+            <v-avatar>
+              <v-img v-if="photoURL" :src="photoURL"></v-img>
+              <v-icon v-else>person_outline</v-icon>
+            </v-avatar>
+          </v-btn>
+        </template>
+        <span>Profile</span>
+      </v-tooltip>
+    </v-toolbar-items>
+    <!-- Signout Button (Signed In) -->
+    <v-toolbar-items v-if="currentUser">
+      <v-btn flat :icon="smallScreen" @click="signout()">
+        {{smallScreen ? "" : "Signout"}}
         <v-icon>exit_to_app</v-icon>
       </v-btn>
     </v-toolbar-items>
+    <!-- Login Button -->
     <v-toolbar-items v-else>
       <v-btn @click="openLogin()" flat>Login</v-btn>
-      <v-dialog width="50%" :fullscreen="$vuetify.breakpoint.smAndDown" v-model="authDialog">
+      <v-dialog width="50%" :fullscreen="smallScreen" v-model="authDialog">
         <v-layout align-start justify-center row fill-height class="white">
           <Authentication
             v-on:closeDialogs="closeDialogs"
@@ -31,33 +51,19 @@
         </v-layout>
       </v-dialog>
     </v-toolbar-items>
-    <v-toolbar-items>
-      <v-btn flat @click="goBack()">
-        <v-icon>arrow_back_ios</v-icon>Back
-      </v-btn>
-    </v-toolbar-items>
   </v-toolbar>
 </template>
 
 <script>
 import firebase from "firebase";
-import Authentication from "../components/dialogs/Authentication.vue";
+import Authentication from "@/components/dialogs/Authentication.vue";
 export default {
+  name: "Header",
   components: {
     Authentication
   },
-  computed: {
-    headerTitle: function() {
-      if (this.$vuetify.breakpoint.smAndDown) return null;
-      else return "Festformer";
-    },
-    headerIcon: function() {
-      if (this.headerTitle) return false;
-      else return true;
-    }
-  },
+  props: ["smallScreen"],
   methods: {
-    debug() {},
     goBack() {
       this.$router.go(-1);
     },
@@ -89,24 +95,25 @@ export default {
       return null;
     }
   },
+  watch: {
+    $route() {
+      this.pageName = this.$route.name;
+    }
+  },
   data() {
     return {
       currentUser: firebase.auth().currentUser,
       authType: "",
       authDialog: false,
-      dialogWidth: "",
-      photoURL: this.getPhotoURL()
+      photoURL: this.getPhotoURL(),
+      pageName: this.$route.name
     };
   },
   created() {
-    firebase.auth().onAuthStateChanged(user => {
-      this.currentUser = user;
+    firebase.auth().onAuthStateChanged(() => {
+      this.currentUser = firebase.auth().currentUser;
       this.photoURL = this.getPhotoURL();
-      if (!this.currentUser) this.$router.push({ name: "Home" });
     });
   }
 };
 </script>
-
-<style>
-</style>

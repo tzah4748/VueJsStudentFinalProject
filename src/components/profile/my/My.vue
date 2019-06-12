@@ -47,7 +47,7 @@ export default {
     ProfileTab,
     FestivalsTab
   },
-  props: ["smallScreen"],
+  props: ["smallScreen", "routerActiveTab"],
   methods: {
     isTabActive(tabName) {
       return tabName == this.activeTab;
@@ -81,6 +81,10 @@ export default {
     this.getCurrentUserFirebaseData().then(data => {
       this.displayName = data.display_name;
     });
+    console.log(this.routerActiveTab);
+    if (this.routerActiveTab) {
+      this.activeTab = this.routerActiveTab;
+    }
   }
 };
 </script>

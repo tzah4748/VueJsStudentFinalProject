@@ -21,9 +21,7 @@
           label="The maximum guests for room:"
           prepend-icon="people"
         ></v-text-field>
-
         <v-text-field v-model="nameOfHotel" disabled label="The name of hotel" prepend-icon="hotel"></v-text-field>
-
         <v-text-field
           v-model="price"
           disabled
@@ -67,7 +65,12 @@ export default {
         .then(roomRef => {
           this.addFestivalToUser(this.festivalID, roomRef.id);
         })
-        .then(() => this.routeTo("Profile", { user_id: this.currentUser.uid }));
+        .then(() =>
+          this.routeTo("Profile", {
+            user_id: this.currentUser.uid,
+            routerActiveTab: "Festivals"
+          })
+        );
     },
     addFestivalToUser(festivalId, roomId) {
       const myFestivals = { my_festivals: { [festivalId]: roomId } };

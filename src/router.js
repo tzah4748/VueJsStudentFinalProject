@@ -23,7 +23,8 @@ const router = new Router({
       component: Profile,
       meta: {
         requiresAuth: true
-      }
+      },
+      props: true
     },
     {
       path: "/festivals",

@@ -131,7 +131,7 @@
                                   class="mr-2"
                                   :class="isPackageDetailsOpen==0 ? 'success--text' : ''"
                                 >info</v-icon>
-                                {{packageName}}
+                                {{packageName}} - Click for more details
                               </span>
                               <span
                                 v-if="packageMaxGuestsNumber"
@@ -148,43 +148,46 @@
                         <v-container class="white black--text">
                           <v-layout column fill-height>
                             <!-- Guests in room - Room Capacity -->
-                            <v-flex xs1 v-if="packageMaxGuestsNumber">
-                              <v-layout align-center justify-start row>
-                                <v-flex>
-                                  <span>Guest Name</span>
-                                </v-flex>
-                                <span>Payment Status</span>
-                              </v-layout>
-                            </v-flex>
+                            <v-layout align-center justify-start row>
+                              <v-flex>
+                                <span>Guest Name</span>
+                              </v-flex>
+                              <span>Payment Status</span>
+                            </v-layout>
                             <!-- Row i of the list - 1 Guest -->
-                            <v-flex>
-                              <v-layout
-                                align-center
-                                justify-start
-                                row
-                                v-for="(guestId,i) in roomGuestsId"
-                                :key="i"
-                                class="my-2"
-                              >
-                                <v-flex>
-                                  <v-icon class="mr-2">fas fa-user</v-icon>
-                                  <span>{{myUsersDataMap.get(guestId).display_name}}</span>
-                                </v-flex>
-                                <v-icon
-                                  v-if="getGuestPaymentStatus(guestId)"
-                                  class="success--text"
-                                >far fa-check-circle</v-icon>
-                                <v-icon v-else class="error--text">far fa-times-circle</v-icon>
-                              </v-layout>
-                              <v-layout align-center justify-space-around row fill-height>
-                                <v-btn class="success" @click="joinRoom=true">Join an existing room</v-btn>
-                                <v-btn class="error" @click="leaveRoom()">Leave Room</v-btn>
-                                <v-btn class="info" @click="paymentForm=true">Click to Pay</v-btn>
-                              </v-layout>
-                            </v-flex>
+                            <v-layout
+                              align-center
+                              justify-start
+                              row
+                              v-for="(guestId,i) in roomGuestsId"
+                              :key="i"
+                              class="my-2"
+                            >
+                              <v-flex>
+                                <v-icon class="mr-2">fas fa-user</v-icon>
+                                <span>{{myUsersDataMap.get(guestId).display_name}}</span>
+                              </v-flex>
+                              <v-icon
+                                v-if="getGuestPaymentStatus(guestId)"
+                                class="success--text"
+                              >far fa-check-circle</v-icon>
+                              <v-icon v-else class="error--text">far fa-times-circle</v-icon>
+                            </v-layout>
+                            <!-- Payment - Leave Room - Buttons -->
+                            <v-layout align-center justify-center row fill-height>
+                              <v-btn class="info" @click="paymentForm=true">Click to Pay</v-btn>
+                              <v-btn
+                                v-if="!getGuestPaymentStatus(currentUser.uid)"
+                                class="error"
+                                @click="leaveRoom=true"
+                              >Leave Room</v-btn>
+                            </v-layout>
                           </v-layout>
                         </v-container>
                       </v-flex>
+                    </v-layout>
+                    <v-layout column justify-center align-center>
+                      <v-btn class="success" small @click="joinRoom=true">Join another room</v-btn>
                     </v-layout>
                   </v-container>
                 </v-flex>
@@ -197,18 +200,21 @@
     </v-flex>
     <v-dialog width="50%" :fullscreen="smallScreen" v-model="joinRoom">
       <v-layout align-start justify-center row fill-height class="white">
-        <JoinRoom
-          :currentUserData="currentUserData"
-          :smallScreen="smallScreen"
-          v-on:closeDialogs="closeDialogs"
-        ></JoinRoom>
+        <JoinRoom :currentUserData="currentUserData" v-on:closeDialogs="closeDialogs"></JoinRoom>
       </v-layout>
     </v-dialog>
-    <v-dialog width="50%" :fullscreen="smallScreen" v-model="paymentForm">
-      <v-layout align-start justify-center row fill-height class="white">
-        <Payment :myUsersDataMap="myUsersDataMap" v-on:closeDialogs="closeDialogs"></Payment>
-      </v-layout>
-    </v-dialog>
+    <template v-if="!loading && myFestivalsId.length != 0">
+      <v-dialog width="50%" :fullscreen="smallScreen" v-model="paymentForm">
+        <v-layout align-start justify-center row fill-height class="white">
+          <Payment :myUsersDataMap="myUsersDataMap" v-on:closeDialogs="closeDialogs"></Payment>
+        </v-layout>
+      </v-dialog>
+      <v-dialog width="50%" :fullscreen="smallScreen" v-model="leaveRoom">
+        <v-layout align-start justify-center row fill-height class="white">
+          <LeaveRoom :leavingRoomId="roomId" v-on:closeDialogs="closeDialogs"></LeaveRoom>
+        </v-layout>
+      </v-dialog>
+    </template>
   </v-layout>
 </template>
 
@@ -216,12 +222,14 @@
 import db from "@/firebase/init";
 import firebase from "firebase";
 import JoinRoom from "@/components/dialogs/JoinRoom.vue";
+import LeaveRoom from "@/components/dialogs/LeaveRoom.vue";
 import Payment from "@/components/dialogs/Payment.vue";
 import forAsync from "for-async";
 export default {
   components: {
     JoinRoom,
-    Payment
+    Payment,
+    LeaveRoom
   },
   props: ["smallScreen"],
   methods: {
@@ -323,6 +331,8 @@ export default {
     },
     closeDialogs() {
       this.joinRoom = false;
+      this.leaveRoom = false;
+      this.paymentForm = false;
     },
     editRoomPassword() {
       this.editPasswordText = "done";
@@ -343,9 +353,6 @@ export default {
         this.errorMsg = err.message;
         this.showErrorAlert = true;
       }
-    },
-    leaveRoom() {
-      console.log("leaveRoom");
     }
   },
   computed: {
@@ -417,6 +424,7 @@ export default {
       vSelectItems: new Map(),
       vSelectedKey: "",
       joinRoom: false,
+      leaveRoom: false,
       password: "",
       editPasswordText: "edit",
       editColor: "secondary",
@@ -427,7 +435,7 @@ export default {
       showErrorAlert: false,
       loader: null,
       roomPwLoading: false,
-      loading: false,
+      loading: true,
       isPackageDetailsOpen: null,
       paymentForm: false
     };

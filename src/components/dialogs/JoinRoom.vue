@@ -105,43 +105,60 @@ export default {
           if (roomData) {
             if (roomData.password == this.password) {
               this.getFestivalData(roomData.festival_id).then(festivalData => {
-                const roomMaxGuests =
-                  festivalData.packages[roomData.package_index].max_guests;
-                if (roomMaxGuests) {
-                  const guestsAndPayment = this.toES6Map(
-                    roomData.guests_and_payment
-                  );
-                  if (guestsAndPayment.has(this.currentUser.uid)) {
-                    this.alertMsg = "Already in this room!";
-                    this.showSuccessAlert = true;
-                  } else if (guestsAndPayment.size < roomMaxGuests) {
-                    db.collection("virtual_rooms")
-                      .doc(this.roomId)
-                      .set(
-                        {
-                          guests_and_payment: { [this.currentUser.uid]: false }
-                        },
-                        { merge: true }
-                      )
-                      .then(() => {
-                        const myFestivals = {
-                          my_festivals: { [roomData.festival_id]: this.roomId }
-                        };
-                        db.collection("users")
-                          .doc(this.currentUser.uid)
-                          .set(myFestivals, { merge: true });
-                      })
-                      .then(() => {
-                        this.alertMsg =
-                          "Successfully Joined Room : " + this.roomId;
-                        this.showSuccessAlert = true;
-                      });
+                if (
+                  !this.toES6Map(this.currentUserData.my_festivals).has(
+                    roomData.festival_id
+                  )
+                ) {
+                  const roomMaxGuests =
+                    festivalData.packages[roomData.package_index].max_guests;
+                  if (roomMaxGuests) {
+                    const guestsAndPayment = this.toES6Map(
+                      roomData.guests_and_payment
+                    );
+                    if (guestsAndPayment.has(this.currentUser.uid)) {
+                      this.alertMsg = "Already in this room!";
+                      this.showSuccessAlert = true;
+                    } else if (guestsAndPayment.size < roomMaxGuests) {
+                      db.collection("virtual_rooms")
+                        .doc(this.roomId)
+                        .set(
+                          {
+                            guests_and_payment: {
+                              [this.currentUser.uid]: false
+                            }
+                          },
+                          { merge: true }
+                        )
+                        .then(() => {
+                          const myFestivals = {
+                            my_festivals: {
+                              [roomData.festival_id]: this.roomId
+                            }
+                          };
+                          db.collection("users")
+                            .doc(this.currentUser.uid)
+                            .set(myFestivals, { merge: true });
+                        })
+                        .then(() => {
+                          this.alertMsg =
+                            "Successfully Joined Room : " + this.roomId;
+                          this.showSuccessAlert = true;
+                        });
+                    } else {
+                      this.alertMsg = "This room is currently full";
+                      this.showErrorAlert = true;
+                    }
                   } else {
-                    this.alertMsg = "This room is currently full";
+                    this.alertMsg = "Wrong room ID";
                     this.showErrorAlert = true;
                   }
                 } else {
-                  this.alertMsg = "Wrong room ID";
+                  this.alertMsg =
+                    "You already own another room in " +
+                    festivalData.name +
+                    " - " +
+                    festivalData.date;
                   this.showErrorAlert = true;
                 }
               });

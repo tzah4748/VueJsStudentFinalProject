@@ -49,7 +49,7 @@
                               class="primary text-none"
                               :style="isHebrewArr[i] ? 'direction: rtl;' : 'ltr'"
                               :class="[smallScreen ? 'caption' : 'title', isHebrewArr[i] ? 'text-xs-right' : 'text-xs-left']"
-                              @click="routeTo('Packages', {parmID: allFestivalsId[i]})"
+                              @click="registerTo(i)"
                             >
                               <v-icon class="mr-1">fas fa-file-signature</v-icon>
                               {{isHebrewArr[i] ? 'לחץ להרשמה' : 'Click to Register'}}
@@ -116,7 +116,7 @@
                           class="primary text-none"
                           :style="isHebrewArr[i] ? 'direction: rtl;' : 'ltr'"
                           :class="[smallScreen ? 'caption' : 'title', isHebrewArr[i] ? 'text-xs-right' : 'text-xs-left']"
-                          @click="routeTo('Packages', {parmID: allFestivalsId[i]})"
+                          @click="registerTo(i)"
                         >
                           <v-icon class="mr-1">fas fa-file-signature</v-icon>
                           {{isHebrewArr[i] ? 'לחץ להרשמה' : 'Click to Register'}}
@@ -231,8 +231,8 @@ export default {
     },
     registerTo(i) {
       this.getCurrentUserFirebaseData().then(data => {
-        if (!(this.allFestivalsId[i] in data.festivals)) {
-          this.regDialog = true;
+        if (!(this.allFestivalsId[i] in data.my_festivals)) {
+          this.routeTo("Packages", { parmID: this.allFestivalsId[i] });
         } else {
           this.snackbar = true;
         }

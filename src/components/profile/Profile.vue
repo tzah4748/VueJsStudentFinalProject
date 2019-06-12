@@ -1,5 +1,5 @@
 <template>
-  <My v-if="isMyProfile()"></My>
+  <My v-if="isMyProfile()" :smallScreen="smallScreen"></My>
   <Other v-else></Other>
 </template>
 
@@ -12,6 +12,7 @@ export default {
     My,
     Other
   },
+  props: ["smallScreen"],
   methods: {
     isMyProfile() {
       if (this.currentUser)

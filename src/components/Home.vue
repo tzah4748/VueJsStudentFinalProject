@@ -8,7 +8,7 @@
             class="white--text text-xs-center"
             :style="smallScreen ? 'font-size:18px;' : 'font-size:26px;'"
           >
-            Fastformer is an innovative platform for management and registration
+            Festformer is an innovative platform for management and registration
             <br>of various festivals and events all over the world!
             <br>We aim to give our customers the most convenient and
             <br>inviting experience to manage

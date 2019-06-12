@@ -1,5 +1,5 @@
 <template>
-  <v-toolbar app fixed dark color="transparent">
+  <v-toolbar app fixed dark color="transparent" :scroll-threshold="1" :scroll-off-screen="true">
     <!-- Side icons for menu (Mobile) -->
     <v-toolbar-side-icon v-if="smallScreen"></v-toolbar-side-icon>
     <!-- Title - Home Link (Not Mobile) -->
@@ -46,6 +46,7 @@
           <Authentication
             v-on:closeDialogs="closeDialogs"
             :authType="authType"
+            :smallScreen="smallScreen"
             @setAuthType="v => {authType=v}"
           ></Authentication>
         </v-layout>
@@ -64,9 +65,6 @@ export default {
   },
   props: ["smallScreen"],
   methods: {
-    goBack() {
-      this.$router.go(-1);
-    },
     openSignup() {
       this.authType = "Signup";
       this.authDialog = true;
@@ -81,7 +79,7 @@ export default {
     closeDialogs() {
       this.authDialog = false;
     },
-    routeTo(_name, _params = "null") {
+    routeTo(_name, _params = {}) {
       this.$router.push({ name: _name, params: _params });
     },
     getPhotoURL() {

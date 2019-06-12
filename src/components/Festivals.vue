@@ -1,69 +1,163 @@
 <template>
-  <v-layout align-start justify-center row fill-height>
-    <v-expansion-panel>
-      <v-expansion-panel-content
-        v-for="(festivalId, i) in allFestivalsId"
-        :key="i"
-        :isHebrew="isHebrew(i, festivalDescription(i))"
-      >
-        <!-- Panel Header\Title -->
-        <template v-slot:header>
-          <span class="text-xs-center">{{festivalName(i)}} - {{festivalDate(i)}}</span>
-        </template>
-        <!-- Panel Contents - The Festival -->
-        <v-layout align-space-around justify-center row fill-height>
-          <!-- Image -->
-          <v-flex xs3 v-if="!smallScreen" class="mx-4">
-            <v-img :src="festivalImg(i)"></v-img>
-          </v-flex>
-          <!-- Description - Weblink - Register -->
-          <v-flex :class="smallScreen ? 'xs9' : 'xs8'">
-            <v-layout align-space-around justify-start column fill-height>
-              <!-- Description -->
-              <span
-                disabled
-                :style="isHebrew ? 'direction: rtl;' : ''"
-                :class="[smallScreen ? 'caption' : 'title', isHebrew ? 'text-xs-right' : 'text-xs-left']"
-              >{{festivalDescription(i)}}</span>
-              <!-- Weblink - Register -->
-              <v-layout align-center justify-center column fill-height>
-                <!-- Register -->
-                <v-btn
-                  v-show="currentUser"
-                  class="primary text-none"
-                  :style="isHebrew ? 'direction: rtl;' : ''"
-                  :class="[smallScreen ? 'caption' : 'title', isHebrew ? 'text-xs-right' : 'text-xs-left']"
-                  @click="registerTo(i)"
-                >{{isHebrew ? 'לחץ להרשמה' : 'Click to Register'}}</v-btn>
-                <!-- Weblink -->
-                <v-btn
-                  class="warning text-none"
-                  :style="isHebrew ? 'direction: rtl;' : ''"
-                  :class="[smallScreen ? 'caption' : 'title', isHebrew ? 'text-xs-right' : 'text-xs-left']"
-                  @click="openWebsite(i)"
-                >{{isHebrew ? 'אתר הפסטיבל לפרטים נוספים' : 'Festival Website'}}</v-btn>
+  <v-layout align-space-around justify-start column fill-height>
+    <!-- Change List \ Carousel View -->
+    <v-flex xs1>
+      <v-layout align-center justify-center fill-height>
+        <v-btn :class="carouselView ? 'success' : ''" @click="carouselView = true">
+          <v-icon>view_carousel</v-icon>Carousel View
+        </v-btn>
+        <v-btn :class="carouselView ? '' : 'success'" @click="carouselView = false">
+          <v-icon>list</v-icon>List View
+        </v-btn>
+      </v-layout>
+    </v-flex>
+    <!-- The View -->
+    <v-flex xs12>
+      <v-layout align-space-around justify-start column fill-height>
+        <!-- Carousel View -->
+        <v-carousel hide-delimiters light :cycle="false" height="100%" v-show="carouselView">
+          <v-carousel-item v-for="(festivalId, i) in allFestivalsData" :key="i" style="height:100%">
+            <v-container fluid fill-height>
+              <v-layout row fill-height class="white mx-4">
+                <v-container fluid fill-height>
+                  <v-layout row fill-height :reverse="isHebrewArr[i]">
+                    <!-- Left Side -Title, Description and Buttons -->
+                    <v-flex :class="smallScreen ? '' : 'xs8'">
+                      <v-layout align-space-around justify-start column fill-height>
+                        <v-flex xs1>
+                          <v-layout align-center justify-center fill-height>
+                            <span
+                              disabled
+                              class="text-xs-center"
+                              :class="smallScreen ? 'title' : 'display-1'"
+                            >{{festivalName(i)}} - {{festivalDate(i)}}</span>
+                          </v-layout>
+                        </v-flex>
+                        <v-flex xs10>
+                          <v-layout align-center justify-center fill-height>
+                            <span
+                              disabled
+                              :style="isHebrewArr[i] ? 'direction: rtl;' : ''"
+                              :class="[smallScreen ? 'caption' : 'subheading', isHebrewArr[i] ? 'text-xs-right' : 'text-xs-left']"
+                            >{{festivalDescription(i)}}</span>
+                          </v-layout>
+                        </v-flex>
+                        <v-flex xs1>
+                          <v-layout justify-center wrap>
+                            <v-btn
+                              v-show="currentUser"
+                              class="primary text-none"
+                              :style="isHebrewArr[i] ? 'direction: rtl;' : 'ltr'"
+                              :class="[smallScreen ? 'caption' : 'title', isHebrewArr[i] ? 'text-xs-right' : 'text-xs-left']"
+                              @click="routeTo('Packages', {parmID: allFestivalsId[i]})"
+                            >
+                              <v-icon class="mr-1">fas fa-file-signature</v-icon>
+                              {{isHebrewArr[i] ? 'לחץ להרשמה' : 'Click to Register'}}
+                            </v-btn>
+                            <v-btn
+                              class="warning text-none"
+                              :style="isHebrewArr[i] ? 'direction: rtl;' : ''"
+                              :class="[smallScreen ? 'caption' : 'title', isHebrewArr[i] ? 'text-xs-right' : 'text-xs-left']"
+                              @click="openWebsite(i)"
+                            >
+                              <v-icon class="mr-1">open_in_new</v-icon>
+                              {{isHebrewArr[i] ? 'אתר הפסטיבל לפרטים נוספים' : 'Festival Website'}}
+                            </v-btn>
+                          </v-layout>
+                        </v-flex>
+                      </v-layout>
+                    </v-flex>
+                    <!-- Right Side - Picture -->
+                    <v-flex xs4 v-if="!smallScreen">
+                      <v-img :src="festivalImg(i)" contain width="100%" height="100%"></v-img>
+                    </v-flex>
+                  </v-layout>
+                </v-container>
               </v-layout>
-            </v-layout>
-          </v-flex>
-          <!-- Just some space in between -->
-          <v-flex v-if="!smallScreen"></v-flex>
-        </v-layout>
-        <v-dialog width="50%" :fullscreen="smallScreen" v-model="regDialog">
-          <v-layout align-start justify-center row fill-height class="white">
-            <FestivalRegistration
-              v:on:closeDialogs="closeDialogs"
-              :isHebrew="isHebrew"
-              :festivalId="allFestivalsId[i]"
-              :festivalData="allFestivalsData[i]"
-            ></FestivalRegistration>
-          </v-layout>
-        </v-dialog>
-      </v-expansion-panel-content>
-    </v-expansion-panel>
-    <v-snackbar v-model="snackbar" bottom multi-line>
-      Already registered to this festival!
-      <v-btn color="pink" flat @click="snackbar = false">Close</v-btn>
-    </v-snackbar>
+            </v-container>
+          </v-carousel-item>
+        </v-carousel>
+        <!-- List View -->
+        <v-expansion-panel v-show="carouselView == false">
+          <v-expansion-panel-content v-for="(festivalId, i) in allFestivalsId" :key="i">
+            <!-- Panel Header\Title -->
+            <template v-slot:header>
+              <span class="text-xs-center">{{festivalName(i)}} - {{festivalDate(i)}}</span>
+            </template>
+            <!-- Panel Contents - The Festival -->
+            <v-container fluid fill-height>
+              <v-layout row fill-height :reverse="isHebrewArr[i]">
+                <!-- Left Side -Title, Description and Buttons -->
+                <v-flex :class="smallScreen ? '' : 'xs8'">
+                  <v-layout align-space-around justify-start column fill-height>
+                    <v-flex xs1>
+                      <v-layout align-center justify-center fill-height>
+                        <span
+                          disabled
+                          class="text-xs-center"
+                          :class="smallScreen ? 'title' : 'display-1'"
+                          v-show="!smallScreen"
+                        >{{festivalName(i)}} - {{festivalDate(i)}}</span>
+                      </v-layout>
+                    </v-flex>
+                    <v-flex xs10>
+                      <v-layout align-center justify-center fill-height>
+                        <span
+                          disabled
+                          :style="isHebrewArr[i] ? 'direction: rtl;' : ''"
+                          :class="[smallScreen ? 'caption' : 'subheading', isHebrewArr[i] ? 'text-xs-right' : 'text-xs-left']"
+                        >{{festivalDescription(i)}}</span>
+                      </v-layout>
+                    </v-flex>
+                    <v-flex xs1>
+                      <v-layout justify-center wrap>
+                        <v-btn
+                          v-show="currentUser"
+                          class="primary text-none"
+                          :style="isHebrewArr[i] ? 'direction: rtl;' : 'ltr'"
+                          :class="[smallScreen ? 'caption' : 'title', isHebrewArr[i] ? 'text-xs-right' : 'text-xs-left']"
+                          @click="routeTo('Packages', {parmID: allFestivalsId[i]})"
+                        >
+                          <v-icon class="mr-1">fas fa-file-signature</v-icon>
+                          {{isHebrewArr[i] ? 'לחץ להרשמה' : 'Click to Register'}}
+                        </v-btn>
+                        <v-btn
+                          class="warning text-none"
+                          :style="isHebrewArr[i] ? 'direction: rtl;' : ''"
+                          :class="[smallScreen ? 'caption' : 'title', isHebrewArr[i] ? 'text-xs-right' : 'text-xs-left']"
+                          @click="openWebsite(i)"
+                        >
+                          <v-icon class="mr-1">open_in_new</v-icon>
+                          {{isHebrewArr[i] ? 'אתר הפסטיבל לפרטים נוספים' : 'Festival Website'}}
+                        </v-btn>
+                      </v-layout>
+                    </v-flex>
+                  </v-layout>
+                </v-flex>
+                <!-- Right Side - Picture -->
+                <v-flex xs4 v-if="!smallScreen">
+                  <v-img :src="festivalImg(i)" contain width="100%" height="100%"></v-img>
+                </v-flex>
+              </v-layout>
+            </v-container>
+            <v-dialog width="50%" :fullscreen="smallScreen" v-model="regDialog">
+              <v-layout align-start justify-center row fill-height class="white">
+                <FestivalRegistration
+                  v:on:closeDialogs="closeDialogs"
+                  :isHebrew="isHebrewArr[i]"
+                  :festivalId="allFestivalsId[i]"
+                  :festivalData="allFestivalsData[i]"
+                ></FestivalRegistration>
+              </v-layout>
+            </v-dialog>
+          </v-expansion-panel-content>
+        </v-expansion-panel>
+        <v-snackbar v-model="snackbar" bottom multi-line>
+          Already registered to this festival!
+          <v-btn color="pink" flat @click="snackbar = false">Close</v-btn>
+        </v-snackbar>
+      </v-layout>
+    </v-flex>
   </v-layout>
 </template>
 
@@ -77,13 +171,18 @@ export default {
   },
   props: ["smallScreen"],
   methods: {
+    routeTo(_name, _params = {}) {
+      this.$router.push({ name: _name, params: _params });
+    },
     getFestivals() {
       db.collection("festivals")
         .get()
         .then(festivals => {
           festivals.forEach(festival => {
-            this.allFestivalsId.push(festival.id);
-            this.allFestivalsData.push(festival.data());
+            this.allFestivalsId.push(festival.id); // Festival ID == Doc Id
+            var festivalData = festival.data(); // Festival Data == Doc Data
+            this.allFestivalsData.push(festivalData); // Push the Doc Data
+            this.isHebrewArr.push(this.isHebrew(festivalData.description)); // Check isHebrew?
           });
         })
         .catch(err => {
@@ -105,7 +204,7 @@ export default {
     openWebsite(i) {
       window.open(this.allFestivalsData[i].site, "_blank");
     },
-    isHebrew(i, testOn) {
+    isHebrew(testOn) {
       var hebrew = /^[א-ת]+/;
       if (hebrew.test(testOn)) {
         return true;
@@ -148,16 +247,16 @@ export default {
       currentUser: firebase.auth().currentUser,
       allFestivalsData: [],
       allFestivalsId: [],
+      isHebrewArr: [],
       regDialog: false,
-      snackbar: false
+      snackbar: false,
+      carouselView: true
     };
   },
   created() {
     firebase.auth().onAuthStateChanged(user => {
       this.currentUser = user;
     });
-  },
-  mounted() {
     this.getFestivals();
   }
 };

@@ -4,6 +4,9 @@ import Router from "vue-router";
 import Home from "./components/Home.vue";
 import Profile from "./components/profile/Profile.vue";
 import Festivals from "./components/Festivals.vue";
+import Packages from "./components/Packages.vue"
+import MakeVirtualRoom from "./components/MakeVirtualRoom.vue"
+
 Vue.use(Router);
 
 const router = new Router({
@@ -26,6 +29,24 @@ const router = new Router({
       path: "/festivals",
       name: "Festivals",
       component: Festivals
+    },
+    {
+      path: "/packages/:parmID",
+      name: "Packages",
+      component: Packages,
+      meta: {
+        requiresAuth: true
+      },
+      props: true
+    },
+    {
+      path: "/makeVirtualRoom",
+      name: "MakeVirtualRoom",
+      component: MakeVirtualRoom,
+      meta: {
+        requiresAuth: true
+      },
+      props: true
     }
   ]
 });

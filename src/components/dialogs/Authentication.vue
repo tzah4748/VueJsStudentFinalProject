@@ -1,5 +1,6 @@
 <template>
   <v-container class="white" @keyup.enter="submitForm()">
+    <!-- Close(X) Button -->
     <v-layout row wrap justify-end>
       <v-btn flat icon color="error" @click="$emit('closeDialogs')">
         <v-icon>clear</v-icon>
@@ -276,9 +277,6 @@ export default {
   props: { authType: String },
   components: { GeoSuggest },
   methods: {
-    debug() {
-      console.log("Debug Func");
-    },
     openSignUpForm() {
       this.$emit("setAuthType", "Signup");
     },

@@ -1,7 +1,7 @@
 <template>
   <v-layout align-space-around justify-start column fill-height>
     <!-- Display Name Toolbar -->
-    <v-toolbar extended>
+    <v-toolbar extended dense>
       <v-spacer></v-spacer>
       <v-toolbar-title disabled>{{displayName}}</v-toolbar-title>
       <!-- Tabs Items -->
@@ -32,8 +32,8 @@
       <v-spacer></v-spacer>
     </v-toolbar>
     <!-- Active Tab View -->
-    <ProfileTab v-if="isTabActive('Profile')"/>
-    <FestivalsTab v-else-if="isTabActive('Festivals')"/>
+    <ProfileTab v-show="isTabActive('Profile')"></ProfileTab>
+    <FestivalsTab v-show="isTabActive('Festivals')" :smallScreen="smallScreen"></FestivalsTab>
   </v-layout>
 </template>
 
@@ -47,6 +47,7 @@ export default {
     ProfileTab,
     FestivalsTab
   },
+  props: ["smallScreen"],
   methods: {
     isTabActive(tabName) {
       return tabName == this.activeTab;

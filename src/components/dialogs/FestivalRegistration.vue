@@ -13,7 +13,7 @@
 import firebase from "firebase";
 import db from "@/firebase/init";
 export default {
-  name: "Authentication",
+  name: "FestivalRegistration",
   props: ["isHebrew", "festivalData", "festivalId"],
   methods: {
     submitForm() {},

@@ -1,50 +1,61 @@
 <template>
-  <v-container class="white" @keyup.enter="JoinRoom()">
-    <!-- Close(X) Button -->
-    <v-layout row wrap justify-end>
-      <v-btn flat icon color="error" @click="$emit('closeDialogs')">
-        <v-icon>clear</v-icon>
-      </v-btn>
+  <v-container class="white" @keyup.enter="pay()">
+    <v-layout column fill-height>
+      <!-- Info Message -->
+      <v-flex>
+        <v-alert :value="true"
+      color="info"
+      icon="info"
+      outline>
+          <span class="subheading">
+            Select the guests you wish to pay for
+          </span>
+        </v-alert>
+      </v-flex>
+      <!-- Guests in room - Payment Status -->
+      <v-layout align-center justify-start row>
+        <v-flex>
+          <span>Guest Name</span>
+        </v-flex>
+        <span>Payment Status</span>
+      </v-layout>
+      <v-layout align-space-around column fill-height v-for="(guestId, i) in roomGuestsList" :key=i>
+      <v-layout align-center justify-space-between row fill-height>
+        <v-flex xs12>
+        <span>{{guestDisplayName(guestId)}}</span>
+        </v-flex>
+        <v-checkbox :v-model="guestPaymentStatus(guestId)" color='success' :disabled="guestPaymentStatus(guestId)" @change="isUserPaymentChecked(guestId)"></v-checkbox></v-layout>
+      </v-layout>
     </v-layout>
-    <v-form ref="JoinRoomForm">
-      <!-- Room ID Field -->
-      <v-text-field
-        prepend-icon="fas fa-door-open"
-        v-model="roomId"
-        :rules="requiredRules"
-        label="Room ID"
-        required
-      ></v-text-field>
-      <!-- Room Password Field -->
-      <v-text-field
-        v-model="password"
-        prepend-icon="lock"
-        :rules="requiredRules"
-        :append-icon="showPassword ? 'visibility' : 'visibility_off'"
-        :type="showPassword ? 'text' : 'password'"
-        counter
-        @click:append="showPassword = !showPassword"
-        label="Password"
-        required
-      ></v-text-field>
-    </v-form>
-    <!-- Join Room Button -->
-    <v-layout column align-center>
-      <v-btn class="primary text-none" @click="JoinRoom()">Join Room</v-btn>
+    <!-- Cancel - Pay Button -->
+    <v-layout row wrap align-center justify-center>
+      <v-btn class="text-none" @click="$emit('closeDialogs')">Cancel</v-btn>
+      <v-btn class="info text-none" @click="pay()">Pay</v-btn>
+      <!-- <PayPal
+        :amount="amount"
+        currency="ILS"
+        :client="credentials"
+        env="sandbox"
+        v-on:payment-authorized="paymentAuthorized"
+        v-on:payment-completed="paymentCompleted"
+        v-on:payment-cancelled="paymentCancelled">
+      </PayPal> -->
     </v-layout>
-    <!-- Error Message -->
-    <v-alert :value="showErrorAlert" color="error" icon="warning" outline>{{alertMsg}}</v-alert>
-    <!-- Success Message -->
-    <v-alert :value="showSuccessAlert" color="success" icon="check_circle" outline>{{alertMsg}}</v-alert>
   </v-container>
 </template>
 
 <script>
-import db from "@/firebase/init";
+// import PayPal from 'vue-paypal-checkout'
 import firebase from "firebase";
 export default {
   name: "JoinRoom",
-  props: ["myUsersDataMap"],
+  components: {
+    // PayPal
+  },
+  props: [
+    "roomData",
+    "myUsersDataMap",
+  ],
   methods: {
     size(obj) {
       var size = 0,
@@ -61,112 +72,77 @@ export default {
       }
       return ret;
     },
-    getVirtualRoomData(roomId) {
-      var promise = db
-        .collection("virtual_rooms")
-        .doc(roomId)
-        .get()
-        .then(doc => {
-          if (doc.exists) {
-            return doc.data();
-          } else {
-            // doc.data() will be undefined in this case
-            console.log("No such document!");
-          }
-        })
-        .catch(function(error) {
-          console.log("Error getting document:", error);
-        });
-      return promise;
+    pay() {
+      console.log(this.amount);
     },
-    getFestivalData(festivalId) {
-      var promise = db
-        .collection("festivals")
-        .doc(festivalId)
-        .get()
-        .then(doc => {
-          if (doc.exists) {
-            return doc.data();
-          } else {
-            // doc.data() will be undefined in this case
-            console.log("No such document!");
-          }
-        })
-        .catch(function(error) {
-          console.log("Error getting document:", error);
-        });
-      return promise;
+    guestDisplayName(guestId) {
+      return this.myUsersDataMap.get(guestId).display_name;
     },
-    JoinRoom() {
-      this.showErrorAlert = false;
-      this.showSuccessAlert = false;
-      if (this.$refs.JoinRoomForm.validate()) {
-        this.getVirtualRoomData(this.roomId).then(roomData => {
-          if (roomData) {
-            if (roomData.password == this.password) {
-              this.getFestivalData(roomData.festival_id).then(festivalData => {
-                const roomMaxGuests =
-                  festivalData.packages[roomData.package_index].max_guests;
-                if (roomMaxGuests) {
-                  const guestsAndPayment = this.toES6Map(
-                    roomData.guests_and_payment
-                  );
-                  if (guestsAndPayment.has(this.currentUser.uid)) {
-                    this.alertMsg = "Already in this room!";
-                    this.showSuccessAlert = true;
-                  } else if (guestsAndPayment.size < roomMaxGuests) {
-                    db.collection("virtual_rooms")
-                      .doc(this.roomId)
-                      .set(
-                        {
-                          guests_and_payment: { [this.currentUser.uid]: false }
-                        },
-                        { merge: true }
-                      )
-                      .then(() => {
-                        const myFestivals = {
-                          my_festivals: { [roomData.festival_id]: this.roomId }
-                        };
-                        db.collection("users")
-                          .doc(this.currentUser.uid)
-                          .set(myFestivals, { merge: true });
-                      })
-                      .then(() => {
-                        this.alertMsg =
-                          "Successfully Joined Room : " + this.roomId;
-                        this.showSuccessAlert = true;
-                      });
-                  } else {
-                    this.alertMsg = "This room is currently full";
-                    this.showErrorAlert = true;
-                  }
-                } else {
-                  this.alertMsg = "Wrong room ID";
-                  this.showErrorAlert = true;
-                }
-              });
-            } else {
-              this.alertMsg = "Wrong room password";
-              this.showErrorAlert = true;
-            }
-          } else {
-            this.alertMsg = "Wrong room ID";
-            this.showErrorAlert = true;
-          }
-        });
+    guestPaymentStatus(guestId) {
+      if (this.paymentStatus) {
+        this.paymentStatus = this.roomGuestsMap.get(guestId);
+      } else {
+        return this.paymentStatus;
       }
+    },
+    generateCopyRoomGuestMap() {
+      var copiedMap = this.toES6Map(this.roomData.guests_and_payment);
+      for (let guest in copiedMap.keys()) {
+        if (copiedMap.get(guest) == true) {
+          copiedMap.delete(guest);
+        }
+      }
+      return copiedMap;
+    },
+    isUserPaymentChecked(guestId) {
+      var paymentStatus = this.copyOfGuestPaymentStatus.get(guestId);
+      if (paymentStatus == false) {
+        this.amount = parseInt(this.amount)
+        this.amount += this.singleGuestAmount
+        this.amount = this.amount.toString()
+        this.copyOfGuestPaymentStatus.set(guestId,true);
+      } else {
+        this.amount = parseInt(this.amount)
+        this.amount -= this.singleGuestAmount
+        this.amount = this.amount.toString()
+        this.copyOfGuestPaymentStatus.set(guestId,false);
+      }
+    },
+    paymentAuthorized: function (data) {
+          console.log(data);
+    },
+    paymentCompleted: function (data) {
+      console.log(data);
+    },
+    paymentCancelled: function (data) {
+      console.log(data);
+    },
+  },
+  computed: {
+    roomGuestsMap: function () {
+      return this.toES6Map(this.roomData.guests_and_payment);
+    },
+    roomGuestsList: function() {
+      return Array.from(this.roomGuestsMap.keys());
+    },
+    singleGuestAmount: function() {
+      return 1;
     }
   },
   data() {
     return {
       currentUser: firebase.auth().currentUser,
-      roomId: "",
-      password: "",
-      showPassword: false,
-      requiredRules: [v => !!v || "This field is required"],
       alertMsg: null,
       showSuccessAlert: false,
-      showErrorAlert: false
+      showErrorAlert: false,
+      roomID: "",
+      paymentStatus: false,
+      copyOfGuestPaymentStatus: this.generateCopyRoomGuestMap(),
+      amount: "0",
+      credentials: {
+        sandbox: '"AahvQYumm1jR8_gfxY_CogT-8Bv7CFBsAnf0_6nt4ZaxaaztoZOOVO-4qdkQ83EuGgB6_PQDw4eoMIyu"',
+        production: '<production client id>'
+      }
     };
   }
 };

@@ -147,7 +147,7 @@
                       <v-flex v-show="isPackageDetailsOpen!=0">
                         <v-container class="white black--text">
                           <v-layout column fill-height>
-                            <!-- Guests in room - Room Capacity -->
+                            <!-- Guests in room - Payment Status -->
                             <v-layout align-center justify-start row>
                               <v-flex>
                                 <span>Guest Name</span>
@@ -175,6 +175,10 @@
                             </v-layout>
                             <!-- Payment - Leave Room - Buttons -->
                             <v-layout align-center justify-center row fill-height>
+                              <v-btn
+                                class="warning"
+                                @click="matchingAlgorithm()"
+                              >Find new room guests</v-btn>
                               <v-btn class="info" @click="paymentForm=true">Click to Pay</v-btn>
                               <v-btn
                                 v-if="!getGuestPaymentStatus(currentUser.uid)"
@@ -206,7 +210,11 @@
     <template v-if="!loading && myFestivalsId.length != 0">
       <v-dialog width="50%" :fullscreen="smallScreen" v-model="paymentForm">
         <v-layout align-start justify-center row fill-height class="white">
-          <Payment :myUsersDataMap="myUsersDataMap" v-on:closeDialogs="closeDialogs"></Payment>
+          <Payment
+            :roomData="roomData"
+            :myUsersDataMap="myUsersDataMap"
+            v-on:closeDialogs="closeDialogs"
+          ></Payment>
         </v-layout>
       </v-dialog>
       <v-dialog width="50%" :fullscreen="smallScreen" v-model="leaveRoom">
@@ -218,6 +226,7 @@
   </v-layout>
 </template>
 
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBofMglaLhlsElBDw7MF52olFtjLSGflEY"></script>
 <script>
 import db from "@/firebase/init";
 import firebase from "firebase";
@@ -225,6 +234,9 @@ import JoinRoom from "@/components/dialogs/JoinRoom.vue";
 import LeaveRoom from "@/components/dialogs/LeaveRoom.vue";
 import Payment from "@/components/dialogs/Payment.vue";
 import forAsync from "for-async";
+import axios from "axios";
+import { Promise } from "q";
+import { access } from "fs";
 export default {
   components: {
     JoinRoom,
@@ -242,9 +254,16 @@ export default {
       return size;
     },
     toES6Map(obj) {
-      const ret = new Map();
+      var ret = new Map();
       for (const item in obj) {
         ret.set(item, obj[item]);
+      }
+      return ret;
+    },
+    toES6Array(obj) {
+      var ret = new Array();
+      for (const item in obj) {
+        ret.push(item);
       }
       return ret;
     },
@@ -265,6 +284,17 @@ export default {
           console.log("Error getting document:", error);
         });
       return promise;
+    },
+    getVirtualRoomsCollection() {
+      return db
+        .collection("virtual_rooms")
+        .get()
+        .then(allVirtualRooms => {
+          return allVirtualRooms;
+        })
+        .catch(function(error) {
+          console.log("Error getting collection:", error);
+        });
     },
     // Get 1 virtual room data
     getVirtualRoomData(virtualRoomId) {
@@ -353,6 +383,287 @@ export default {
         this.errorMsg = err.message;
         this.showErrorAlert = true;
       }
+    },
+    /*
+    // Algorithm 1 - Mutual Friends
+    getFacebookFriends(accessToken) {
+      var promise = axios
+        .get(
+          "https://graph.facebook.com/v3.3/me?fields=friends&access_token=" +
+            accessToken
+        )
+        .then(response => {
+          return response.data.friends.data;
+        });
+      return promise;
+    },
+    getAccessTokenFromFacebookID(facebookId) {
+      var promise = db
+        .collection("facebook_users")
+        .doc(facebookId)
+        .get()
+        .then(doc => {
+          if (doc.exists) {
+            return doc.data().access_token;
+          } else {
+            // doc.data() will be undefined in this case
+            console.log("No such document!");
+          }
+        })
+        .catch(function(error) {
+          console.log("Error getting document:", error);
+        });
+      return promise;
+    },
+    mutualFriendsAlgorithm(potentialUsers) {
+      var maxMutualFriends = 0;
+      this.getFacebookFriends(this.currentUserData.access_token).then(
+        myFriends => {
+          forAsync(myFriends, friendObject =>
+            this.getAccessTokenFromFacebookID(friendObject.id).then(
+              friendAccessToken => {
+                var mutualFriends = 0;
+                if (friendObject.id in potentialUsers) {
+                  this.getFacebookFriends(friendAccessToken).then(
+                    friendsOfFriend => {
+                      for (const otherFriendIndex in friendsOfFriend) {
+                        const otherFriend = friendsOfFriend[otherFriendIndex];
+                        for (const myFriendIndex in myFriends) {
+                          const myFriend = myFriends[myFriendIndex];
+                          if (otherFriend.id == myFriend.id) {
+                            mutualFriends += 1;
+                            break;
+                          }
+                        }
+                      }
+                      if (mutualFriends > maxMutualFriends) {
+                        maxMutualFriends = mutualFriends;
+                      }
+                      this.facebookIdToMutualFriendsMap.set(
+                        friendObject.id,
+                        mutualFriends
+                      );
+                    }
+                  );
+                }
+              }
+            )
+          ).then(() => {
+            Array.from(this.facebookIdToMutualFriendsMap.keys()).forEach(
+              facebookId => {
+                var mutualFriendsValue = this.facebookIdToMutualFriendsMap.get(
+                  facebookId
+                );
+                this.facebookIdToMutualFriendsMap.set(
+                  facebookId,
+                  parseFloat(
+                    parseFloat(mutualFriendsValue) /
+                      parseFloat(maxMutualFriends)
+                  )
+                );
+              }
+            );
+          });
+        }
+      );
+      console.log("inside ", this.facebookIdToMutualFriendsMap);
+    },
+    // Algorithm 2 - Distance Between Users
+    distanceAlgorithm(potentialUsers) {
+      var minDistance = 0;
+      var callbackResponse = null;
+      var callbackStatus = null;
+      const myAddress = [this.currentUserData.address];
+      var allDestinations = [];
+      // Generate allDestinations from user data
+      console.log("inside2", this.userIdToDistanceMap);
+      forAsync(potentialUsers, userId =>
+        this.getUserData(userId).then(userData => {
+          allDestinations.push(userData.address);
+        })
+      ).then(() => {
+        // If there is a destination to calculate distance to :
+        if (allDestinations.length > 0) {
+          var service = new google.maps.DistanceMatrixService();
+          service.getDistanceMatrix(
+            {
+              origins: myAddress,
+              destinations: allDestinations,
+              travelMode: "DRIVING"
+            },
+            (response, status) => {
+              // See Parsing the Results for
+              // the basics of a callback function.
+              potentialUser.forEach((userId, i) => {
+                var distance = response.rows[0].elements[i].distance.value;
+                if (i == 0) {
+                  minDistance = distance;
+                } else {
+                  if (minDistance > distance) {
+                    minDistance = distance;
+                  }
+                }
+                this.userIdToDistanceMap.set(userId, distance);
+                Array.from(this.userIdToDistanceMap.keys()).forEach(userId => {
+                  var distance = this.userIdToDistanceMap.get(userId);
+                  this.userIdToDistanceMap.set(
+                    userId,
+                    parseFloat(parseFloat(minDistance) / parseFloat(distance))
+                  );
+                });
+              });
+            }
+          );
+        }
+      });
+    },*/
+    async algorithmCalculateRoomScore(roomData) {
+      var roomScore = new Array(); // Just for debugging
+      const roomCurrentGuestsIdArray = this.toES6Array(
+        roomData.guests_and_payment
+      );
+      await forAsync(roomCurrentGuestsIdArray, (guestId, idx) =>
+        this.getUserData(guestId).then(async guestData => {
+          const guestScore = await this.algorithmCalculateGuestScore(guestData);
+          for (i = 0; i < this.size(guestScore); i++) roomScore += guestScore;
+        })
+      );
+      return roomScore / roomCurrentGuestsIdArray.length;
+    },
+    async algorithmCalculateGuestScore(guestData) {
+      const mutualFriendsScore = await this.algorithmMutualFriends(guestData);
+      // const distanceScore = await this.algorithmDistance(guestData);
+      const genderScore = await this.algorithmGender(guestData);
+      // console.log("mutualFriendsScore", mutualFriendsScore);
+      // console.log("distanceScore", distanceScore);
+      // console.log("genderScore", genderScore);
+      var retArray = new Array();
+      retArray.push(mutualFriendsScore);
+      retArray.push(genderScore);
+      return retArray;
+    },
+    async algorithmMutualFriends(guestData) {
+      // If this guest has logged in with facebook
+      if (guestData.fb_id) {
+        // Get my own facebook friends list
+        var friendsObjectListObject = await this.getFacebookFriends(
+          this.currentUserData.access_token
+        );
+        // Get specific guest's facebook friends list
+        var myFriendFriendsObjectListObject = await this.getFacebookFriends(
+          guestData.access_token
+        );
+        // Cast the list from object type to array type
+        const myFriendsObjectListArray = this.toES6Array(
+          friendsObjectListObject
+        );
+        // Cast the list from object type to array type
+        const myFirendFriendsObjectListArray = this.toES6Array(
+          myFriendFriendsObjectListObject
+        );
+        // Create from my list of objects an array of only ID's
+        const myFriendsArray = new Array();
+        for (const myFriendObject in myFriendsObjectListArray) {
+          myFriendsArray.push(myFriendObject.id);
+        }
+        // Create from guest's list of objects an array of only ID's
+        const guestFriendsArray = new Array();
+        for (const guestFriendObject in myFirendFriendsObjectListArray) {
+          guestFriendsArray.push(guestFriendObject.id);
+        }
+        // Filter all the mutual friends
+        myFriendsArray.filter(e => guestFriendsArray.includes(e));
+        return myFriendsArray.length;
+      } else {
+        return 0;
+      }
+    },
+    algorithmDistance(guestData) {
+      const service = new google.maps.DistanceMatrixService();
+      service.getDistanceMatrix(
+        {
+          origins: [this.currentUserData.address],
+          destinations: [guestData.address],
+          travelMode: "DRIVING"
+        },
+        function(response, status) {
+          // See Parsing the Results for
+          // the basics of a callback function.
+          console.log(response);
+          console.log(status);
+          console.log(this.algorithmDistanceResult);
+          if (response.rows[0].elements[0].status != "OK") {
+            // this.algorithmDistanceResult = -1;
+          } else {
+            // this.algorithmDistanceResult =
+            //   response.rows[0].elements[0].distance.value;
+          }
+          console.log("distance", response.rows[0].elements[0].distance.value);
+        }
+      );
+      return this.algorithmDistanceResult;
+    },
+    algorithmGender(guestData) {
+      // Check gender equallity --> returns 1 for true : else return 0
+      if (this.currentUserData.gender == guestData.gender) {
+        return 1;
+      } else {
+        return 0;
+      }
+    },
+    async matchingAlgorithm() {
+      // const --> Read only
+      var potentialRooms = new Map(); // Map of (key: roomId, value: roomData)
+      var allVirtualRooms = null;
+      // Get all virtual rooms
+      await this.getVirtualRoomsCollection().then(_allVirtualRooms => {
+        allVirtualRooms = _allVirtualRooms;
+      });
+      // For every room in the database
+      allVirtualRooms.forEach(roomDoc => {
+        const roomId = roomDoc.id;
+        const roomData = roomDoc.data();
+        // Take only the rooms that are belonging to this festival
+        if (roomData.festival_id == this.festivalId) {
+          // Check if virtual room is associated with an hotel
+          // How to do this? We will check the hotel_index parameter --> For value of -1 --> no hotel
+          // hotel_index location : festivalData --> packages[room's package index] --> hotel_index
+          const hotelIndex = this.festivalData.packages[roomData.package_index]
+            .hotel_index;
+          if (hotelIndex >= 0) {
+            // Check if the room isn't full
+            // How to do this? We will check the max_guests parameter --> if (max_guests > room current guests) --> room is available
+            // max_guests location : festivalData --> packages[room's package index] --> max_guests
+            const maxGuests = this.festivalData.packages[roomData.package_index]
+              .max_guests;
+            const roomCurretGuestsNum = this.size(roomData.guests_and_payment);
+            if (maxGuests > roomCurretGuestsNum) {
+              // Room is available, we can add it to potential rooms in order to give it a score.
+              potentialRooms.set(roomId, roomData);
+            }
+          }
+        }
+      });
+      console.log("await this.getVirtualRoomsCollection() DONE!");
+      const potentialRoomsIdArray = Array.from(potentialRooms.keys());
+      const potentialRoomsDataArray = Array.from(potentialRooms.values());
+      for (let i = 0; i < potentialRoomsIdArray.length; i++) {
+        // Get the current room id and its data
+        const roomId = potentialRoomsIdArray[i];
+        const roomData = potentialRoomsDataArray[i];
+        // Calculate the current room's score
+        const roomScore = await this.algorithmCalculateRoomScore(roomData);
+        // Add {roomId: roomData} to map
+        this.algorithmRoomToDataMap.set(roomId, roomData);
+        // Add {roomId: roomScore} to map
+        this.algorithmRoomToScoreMap.set(roomId, roomScore);
+      }
+      // Sort the room scores map by scores \ by value - (value is the score)
+      console.log(this.algorithmRoomToScoreMap);
+      this.algorithmRoomToScoreMap = new Map(
+        [...this.algorithmRoomToScoreMap.entries()].sort((a, b) => b[1] - a[1])
+      );
+      console.log(this.algorithmRoomToScoreMap);
     }
   },
   computed: {
@@ -437,7 +748,11 @@ export default {
       roomPwLoading: false,
       loading: true,
       isPackageDetailsOpen: null,
-      paymentForm: false
+      paymentForm: false,
+      algorithmDistanceResult: 12343242,
+      algorithmRoomToScoreMap: new Map(),
+      algorithmRoomToDataMap: new Map(),
+      algorithmUserToDataMap: new Map()
     };
   },
   async created() {

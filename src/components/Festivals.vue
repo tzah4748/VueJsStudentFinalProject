@@ -231,10 +231,14 @@ export default {
     },
     registerTo(i) {
       this.getCurrentUserFirebaseData().then(data => {
-        if (!(this.allFestivalsId[i] in data.my_festivals)) {
-          this.routeTo("Packages", { parmID: this.allFestivalsId[i] });
+        if(data.my_festivals) {
+          if (!(this.allFestivalsId[i] in data.my_festivals)) {
+            this.routeTo("Packages", { parmID: this.allFestivalsId[i] });
+          } else {
+            this.snackbar = true;
+          }
         } else {
-          this.snackbar = true;
+          this.routeTo("Packages", { parmID: this.allFestivalsId[i] });
         }
       });
     },

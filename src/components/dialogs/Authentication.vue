@@ -377,6 +377,7 @@ export default {
         .then(response => {
           var refereshedData = response.data;
           var fbData = this.getFbProviderData();
+          // console.log(fbData);
           db.collection("users")
             .doc(user.uid)
             .set(
@@ -389,6 +390,12 @@ export default {
                 display_name: fbData.displayName,
                 email: fbData.email
               },
+              { merge: true }
+            );
+          db.collection("facebook_users")
+            .doc(fbData.uid)
+            .set(
+              { access_token: refereshedData.access_token },
               { merge: true }
             );
         });
@@ -424,7 +431,7 @@ export default {
                 .set(
                   {
                     email: this.email,
-                    displayName: this.firstName + " " + this.lastName,
+                    display_name: this.firstName + " " + this.lastName,
                     id: this.ID,
                     mobile: this.mobile,
                     date_of_birth: this.date,
@@ -454,7 +461,11 @@ export default {
      * @param {Object} placeResultData PlaceResult object
      * @param {String} id Input container ID
      */
+
     getAddressData: function(addressData) {
+      console.log(addressData);
+      // console.log(placeResultData)
+      // console.log(id)
       this.address = addressData;
     },
     getFbProviderData() {
@@ -541,6 +552,8 @@ export default {
       addressRules: [
         v => !!v || "Address is required",
         () => {
+          console.log(this.selectedSuggestion);
+          console.log(this.address);
           if (this.selectedSuggestion) {
             if (this.selectedSuggestion.description) {
               return true;

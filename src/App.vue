@@ -61,6 +61,10 @@ export default {
                   this.snackbar = true;
                 }
               });
+          }).catch(err => {
+            console.log(err)
+            firebase.auth().signOut();
+            this.snackbar = true;
           });
       }
     },
@@ -95,11 +99,6 @@ export default {
       this.getCurrentUserFirebaseData().then(data => {
         this.checkAccessToken(data.access_token);
       });
-      // axios
-      //     .get(
-      //       "https://graph.facebook.com/v3.3/me?fields=id%2Cname&access_token=" +
-      //         accessToken
-      //     )
     }
   }
 };

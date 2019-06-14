@@ -81,7 +81,6 @@ export default {
     this.getCurrentUserFirebaseData().then(data => {
       this.displayName = data.display_name;
     });
-    console.log(this.routerActiveTab);
     if (this.routerActiveTab) {
       this.activeTab = this.routerActiveTab;
     }
